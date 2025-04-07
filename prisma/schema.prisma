@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String
+  name             String?
+  reviews          Review[]
+  refreshToken     String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  role             Role      @default(USER)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Listing {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  rating      Float?
+  address     String
+  city        String
+  zip         String
+  phone       String?
+  email       String?
+  website     String?
+  reviews     Review[]
+  categoryId  Int
+  category    Category  @relation(fields: [categoryId], references: [id])
+  locationId  Int? // Foreign key (optional if listing can exist without location)
+  location    Location? @relation(fields: [locationId], references: [id])
+
+  images    ListingImage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model ListingImage {
+  id          Int      @id @default(autoincrement())
+  url         String
+  alt         String?
+  description String?
+  thumbnail   String?
+  isMain      Boolean  @default(false)
+  order       Int      @default(0)
+  listingId   Int
+  listing     Listing  @relation(fields: [listingId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  listings Listing[] // a category can have many listings
+}
+
+model Location {
+  id             Int       @id @default(autoincrement())
+  name           String
+  slug           String?
+  description    String?
+  parent         Int?
+  featured_image String?
+  listing        Listing[]
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  content   String
+  rating    Int
+  userId    Int
+  listingId Int
+  user      User     @relation(fields: [userId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
