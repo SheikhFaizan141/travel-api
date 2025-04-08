@@ -20,7 +20,7 @@ import {
   getCategories,
   updateCategory,
 } from "../controllers/admin/categoryController";
-import clientRoutes from "./clientRoutes";
+import adminRoutes from "./adminRoutes";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
 // import multer from "multer";
@@ -58,6 +58,7 @@ router.patch(
 // // delete listing route
 router.delete("/listings/:id", deleteListing);
 
+router.use("/admin", adminRoutes);
 // location routes here
 router.get("/locations", getLocations);
 
