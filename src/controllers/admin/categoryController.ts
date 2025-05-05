@@ -2,14 +2,13 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../../config/db";
 import { Prisma } from "@prisma/client";
+import {
+  CategorySchema,
+  IdSchema,
+  UpdateLocationSchema,
+} from "../../schemas/schemas";
 
-const IdSchema = z.object({
-  id: z.preprocess((val) => {
-    return typeof val === "string" ? Number.parseInt(val, 10) : val;
-  }, z.number().int().positive()),
-});
-
-const LocationsParamsSchema = z.object({
+const CategoryParamsSchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(500).optional(),
 });
@@ -17,18 +16,48 @@ const LocationsParamsSchema = z.object({
 export const getCategories = async (req: Request, res: Response) => {
   try {
     // validate the query parameters for page and limit
-    const { page = 1, limit = 10 } = LocationsParamsSchema.parse(req.query);
+    const { page = 1, limit = 10 } = CategoryParamsSchema.parse(req.query);
 
-    const locations = await prisma.category.findMany({
-      take: limit,
-      skip: limit * (page - 1),
-    });
+    const [categories, totalItems] = await Promise.all([
+      prisma.category.findMany({
+        take: limit,
+        skip: limit * (page - 1),
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.category.count(),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
 
     res.status(200).json({
-      data: locations,
+      success: true,
+      data: categories,
+      pagination: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages: totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     console.error("Error fetching listing:", error);
+
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: "validation error",
+        details: error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        })),
+      });
+      return;
+    }
 
     if (error instanceof z.ZodError) {
       res.status(400).json({
@@ -50,47 +79,81 @@ export const getCategories = async (req: Request, res: Response) => {
   }
 };
 
-export const getLocation = async (req: Request, res: Response) => {
+export const getCategory = async (req: Request, res: Response) => {
   try {
     const { id } = IdSchema.parse(req.params);
 
-    const location = await prisma.location.findUnique({
+    const category = await prisma.category.findUniqueOrThrow({
       where: {
         id: id,
       },
     });
 
-    if (!location) {
-      res.status(404).json({ error: "location not found" });
-      return;
-    }
-
     res.json({
-      data: location,
+      success: true,
+      data: category,
     });
   } catch (error) {
     console.error("Error fetching location:", error);
+
+    // Handle not found error
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        res.status(404).json({
+          success: false,
+          error: "category not found",
+        });
+        return;
+      }
+    }
 
     // Handle other errors
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-const CategorySchema = z.object({
-  name: z.string().max(255),
-});
-
 export const createCategory = async (req: Request, res: Response) => {
   try {
     const validatedData = CategorySchema.parse(req.body);
 
+    const existingCategory = await prisma.category.findUnique({
+      where: {
+        slug: validatedData.slug,
+      },
+    });
+
+    if (existingCategory) {
+      res.status(400).json({
+        success: false,
+        error: "Slug already exists",
+        details: [
+          {
+            field: "slug",
+            message: "Slug already exists for another category.",
+          },
+        ],
+      });
+      return;
+    }
+
+    // Check if the banner image is provided and set the image URL
+    let fileUrl = "";
+    if (req.file) {
+      const baseUrl = process.env.BASE_URL; // Replace with your server's base URL
+      fileUrl = `${baseUrl}/${req.file.path.replace(/\\/g, "/")}`;
+    }
+
+    // create the category
     const newCategory = await prisma.category.create({
-      data: validatedData,
+      data: {
+        ...validatedData,
+        banner_image: fileUrl,
+      },
     });
 
     res.status(201).json({
       success: true,
-      message: "Location created",
+      message: "category created successfully",
       data: newCategory,
     });
   } catch (error) {
@@ -110,35 +173,31 @@ export const createCategory = async (req: Request, res: Response) => {
       return;
     }
 
-    // if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    //   if (error.code === "P2002") {
-    //     res.status(400).json({
-    //       success: false,
-    //       error: "Category already exists",
-    //     });
-    //     return;
-    //   }
-    // }
-
     // Handle other errors
     res.status(500).json({ error: "Internal server error", details: error });
   }
 };
 
-// Schema for update validation
-const UpdateCategorySchema = CategorySchema.extend({
-  featured_image: z.string().optional(),
-})
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field must be provided for a PATCH request",
-  });
-
 export const updateCategory = async (req: Request, res: Response) => {
   try {
     const { id } = IdSchema.parse(req.params);
 
-    const validatedData = UpdateCategorySchema.parse(req.body);
+    const validatedData = UpdateLocationSchema.parse(req.body);
+
+    const existing = await prisma.category.findFirst({
+      where: {
+        slug: validatedData.slug,
+        NOT: { id: id },
+      },
+    });
+
+    if (existing) {
+      res.status(400).json({
+        success: false,
+        error: { message: "Slug already exists for another category." },
+      });
+      return;
+    }
 
     await prisma.category.findUniqueOrThrow({
       where: {
@@ -146,7 +205,7 @@ export const updateCategory = async (req: Request, res: Response) => {
       },
     });
 
-    // Update the listing
+    // Update the category
     const updatedCategory = await prisma.category.update({
       where: {
         id: id,
@@ -197,9 +256,9 @@ export const deleteCategory = async (req: Request, res: Response) => {
     const { id } = IdSchema.parse(req.params);
 
     // Verify existence first
-    await prisma.location.findUniqueOrThrow({ where: { id } });
+    await prisma.category.findUniqueOrThrow({ where: { id } });
 
-    await prisma.location.delete({
+    await prisma.category.delete({
       where: {
         id: id,
       },

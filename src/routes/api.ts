@@ -14,12 +14,6 @@ import {
   updateLocation,
 } from "../controllers/admin/locationController";
 import upload from "../config/filesystems";
-import {
-  createCategory,
-  deleteCategory,
-  getCategories,
-  updateCategory,
-} from "../controllers/admin/categoryController";
 import adminRoutes from "./adminRoutes";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
@@ -30,20 +24,19 @@ const router = express.Router();
 // router.use("/", clientRoutes);
 
 // get listings route
-router.get("/listings", getListings);
+// router.get("/listings", getListings);
 
-// get listing route
-router.get("/listings/:id", getListing);
+
 
 // create listing route
-router.post(
-  "/listings",
-  upload.fields([
-    { name: "featuredImage", maxCount: 1 },
-    { name: "otherImages", maxCount: 5 },
-  ]),
-  createListing
-);
+// router.post(
+//   "/listings",
+//   upload.fields([
+//     { name: "featuredImage", maxCount: 1 },
+//     { name: "otherImages", maxCount: 5 },
+//   ]),
+//   createListing
+// );
 
 // // update listing route
 router.patch(
@@ -57,7 +50,7 @@ router.patch(
 
 // // delete listing route
 router.delete("/listings/:id", deleteListing);
-
+ 
 router.use("/admin", adminRoutes);
 // location routes here
 router.get("/locations", getLocations);
@@ -73,17 +66,6 @@ router.patch("/locations/:id", upload.single("featured_image"), updateLocation);
 
 // // delete location route
 router.delete("/locations/:id", deleteLocation);
-
-// // category routes here
-router.get("/categories", getCategories);
-
-// router.get("/categories/:id");
-
-router.post("/categories", createCategory);
-
-router.patch("/categories", updateCategory);
-
-router.delete("/categories/:id", deleteCategory);
 
 // // test routes
 router.post(

@@ -37,9 +37,9 @@ model Listing {
   name        String
   description String
   rating      Float?
-  address     String
-  city        String
-  zip         String
+  address     String?
+  city        String?
+  zip         String?
   phone       String?
   email       String?
   website     String?
@@ -68,9 +68,16 @@ model ListingImage {
 }
 
 model Category {
-  id       Int       @id @default(autoincrement())
-  name     String
-  listings Listing[] // a category can have many listings
+  id           Int       @id @default(autoincrement())
+  name         String
+  slug         String    @unique
+  description  String?
+  icon         String?
+  banner_image String?
+  listings     Listing[] // a category can have many listings
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Location {
@@ -81,6 +88,9 @@ model Location {
   parent         Int?
   featured_image String?
   listing        Listing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Review {

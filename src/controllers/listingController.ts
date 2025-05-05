@@ -9,7 +9,11 @@ import { Prisma } from "@prisma/client";
 
 export const getListings = async (req: Request, res: Response) => {
   try {
-    const listings = await prisma.listing.findMany();
+    const listings = await prisma.listing.findMany({
+      include: {
+        category: true,
+      },
+    });
 
     res.status(200).json({
       data: listings,
@@ -44,6 +48,9 @@ export const getListing = async (req: Request, res: Response) => {
       return;
     }
 
+    console.log("Listing:", listing);
+    
+
     res.json({
       data: listing,
     });
@@ -66,53 +73,40 @@ export const createListing = async (req: Request, res: Response) => {
 
     const listingData = req.body;
 
-    console.log("listingData", listingData);
-    
     const validatedData = ListingSchema.parse(listingData);
-
-
-    // console.log("listingData", validatedData);
-
-    res.status(200).json({ 
-      data: listingData, 
-      beforeVal: req.body,
-    });
- 
-    // return;
 
     // Get Upload images files
     const files = req.files as Express.Multer.File[];
 
-    // Immediately capture all file paths
-    uploadedFiles.push(...files.map((file) => file.path));
+    // console.log("Files:", files);
 
-    const imagePaths =
-      files?.map((file) => file.path.replace(/\\/g, "/")) || [];
-
-    // Create transaction for atomic operations
-    const result = await prisma.$transaction(async (tx) => {
+    const createdListing = prisma.$transaction(async (tx) => {
+      // Check if files are uploaded
       const newListing = await tx.listing.create({
         data: validatedData,
       });
 
-      if (imagePaths.length) {
-        await tx.listingImage.createMany({
-          data: imagePaths.map((path, index) => ({
-            url: `${process.env.BASE_URL}/${path}`,
-            listingId: newListing.id,
-            isMain: index === 0,
-            order: index,
-          })),
-        });
+      if (files && files.length > 0) {
+        const featureImage = files.find(
+          (file) => file.fieldname === "featuredImage"
+        );
+
+        if (featureImage) {
+          const listingImage = prisma.listingImage.create({
+            data: {
+              url: `${process.env.BASE_URL}/${featureImage.path.replace(
+                /\\/g,
+                "/"
+              )}`,
+              isMain: true,
+              order: 0,
+              listingId: newListing.id,
+            },
+          });
+        }
       }
 
       return newListing;
-    });
-
-    // Fetch complete listing data
-    const createdListing = await prisma.listing.findUnique({
-      where: { id: result.id },
-      include: { images: true },
     });
 
     res.status(201).json({
@@ -173,13 +167,13 @@ export const updateListing = async (req: Request, res: Response) => {
   try {
     const { id } = IdSchema.parse(req.params);
 
-    // Verify existence first 
-    await prisma.listing.findUniqueOrThrow({ 
+    // Verify existence first
+    await prisma.listing.findUniqueOrThrow({
       where: {
         id: id,
       },
     });
- 
+
     const listingData = JSON.parse(req.body.listing);
     const validatedData = UpdateListingSchema.parse(listingData);
 

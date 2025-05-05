@@ -15,6 +15,8 @@ app.use(
   })
 );
 
+app.use("/uploads", express.static("uploads"));
+
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
