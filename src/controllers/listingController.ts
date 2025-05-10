@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { IdSchema } from "../utils/schemas";
 import { ListingSchema, UpdateListingSchema } from "../schemas/schemas";
-import { Prisma } from "@prisma/client";
+import { Prisma, WorkingHour } from "@prisma/client";
 
 export const getListings = async (req: Request, res: Response) => {
   try {
@@ -49,7 +49,6 @@ export const getListing = async (req: Request, res: Response) => {
     }
 
     console.log("Listing:", listing);
-    
 
     res.json({
       data: listing,
@@ -66,33 +65,57 @@ export const createListing = async (req: Request, res: Response) => {
   const uploadedFiles: string[] = []; // Track all uploaded files
 
   try {
-    // Validate environment configuration first
     if (!process.env.BASE_URL) {
       throw new Error("BASE_URL environment variable is not configured");
     }
 
     const listingData = req.body;
 
-    const validatedData = ListingSchema.parse(listingData);
+    // Safely parse working hours if they exist
+    const workingHours = (req.body.workingHours as WorkingHour)
+      ? JSON.parse(req.body.workingHours)
+      : undefined;
 
-    // Get Upload images files
+    // Validate with optional working hours
+    const validatedData = ListingSchema.parse({
+      ...listingData,
+      workingHours: workingHours,
+    });
+
     const files = req.files as Express.Multer.File[];
 
-    // console.log("Files:", files);
-
-    const createdListing = prisma.$transaction(async (tx) => {
-      // Check if files are uploaded
-      const newListing = await tx.listing.create({
-        data: validatedData,
+    const createdListing = await prisma.$transaction(async (tx) => {
+      await tx.category.findUniqueOrThrow({
+        where: { id: validatedData.categoryId },
       });
 
-      if (files && files.length > 0) {
-        const featureImage = files.find(
-          (file) => file.fieldname === "featuredImage"
-        );
+      const { workingHours, ...rest } = validatedData;
+      const newListing = await tx.listing.create({
+        data: {
+          ...rest,
+          WorkingHour: validatedData.workingHours
+            ? {
+                createMany: {
+                  data: validatedData.workingHours.map((wh) => ({
+                    day: wh.day,
+                    is24Hour: wh.is24Hour,
+                    openTime: wh.openingTime,
+                    closeTime: wh.closingTime,
+                  })),
+                },
+              }
+            : undefined,
+        },
+        include: {
+          WorkingHour: true,
+        },
+      });
 
+      if (files?.length) {
+        const featureImage = files.find((f) => f.fieldname === "featuredImage");
         if (featureImage) {
-          const listingImage = prisma.listingImage.create({
+          uploadedFiles.push(featureImage.path);
+          await tx.listingImage.create({
             data: {
               url: `${process.env.BASE_URL}/${featureImage.path.replace(
                 /\\/g,
@@ -116,6 +139,20 @@ export const createListing = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error updating listing:", error);
 
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: "Validation error",
+        details: error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        })),
+      });
+
+      return;
+    }
+
     // Cleanup files if any error occurs
     if (uploadedFiles.length > 0) {
       await Promise.all(
@@ -135,28 +172,15 @@ export const createListing = async (req: Request, res: Response) => {
       );
     }
 
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: "Validation error",
-        details: error.errors.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
-        })),
-      });
-
-      return;
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2003") {
+        res.status(400).json({
+          success: false,
+          error: "Invalid category ID: Category does not exist",
+        });
+        return;
+      }
     }
-
-    // if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    //   // The .code property can be accessed in a type-safe manner
-    //   if (error.code === "P2002") {
-    //     console.log(
-    //       "There is a unique constraint violation, a new user cannot be created with this email"
-    //     );
-    //   }
-    // }
 
     // Handle other errors
     res.status(500).json({ error: "Internal server error a", details: error });

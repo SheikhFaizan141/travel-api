@@ -15,6 +15,7 @@ import {
 } from "../controllers/admin/locationController";
 import upload from "../config/filesystems";
 import adminRoutes from "./adminRoutes";
+import prisma from "../config/db";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
 // import multer from "multer";
@@ -25,8 +26,6 @@ const router = express.Router();
 
 // get listings route
 // router.get("/listings", getListings);
-
-
 
 // create listing route
 // router.post(
@@ -50,7 +49,7 @@ router.patch(
 
 // // delete listing route
 router.delete("/listings/:id", deleteListing);
- 
+
 router.use("/admin", adminRoutes);
 // location routes here
 router.get("/locations", getLocations);
@@ -86,5 +85,15 @@ router.post(
     });
   }
 );
+
+// categories
+router.get("/categories", async (req, res) => {
+  const categories = await prisma.category.findMany();
+
+  res.status(200).json({
+    success: true,
+    data: categories,
+  });
+});
 
 export default router;

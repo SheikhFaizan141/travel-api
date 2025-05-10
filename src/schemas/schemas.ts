@@ -4,8 +4,58 @@ export const IdSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
+const WorkingHourSchema = z
+  .object({
+    day: z.enum([
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ]),
+    is24Hour: z.boolean().default(false),
+    openingTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)")
+      .optional(),
+    closingTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format (HH:MM)")
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.is24Hour) {
+      // Require both times
+      if (!data.openingTime || !data.closingTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Both times required when not 24h",
+          path: ["openingTime"],
+        });
+      }
+
+      // Validate time order
+      if (data.openingTime && data.closingTime) {
+        const [openH, openM] = data.openingTime.split(":").map(Number);
+        const [closeH, closeM] = data.closingTime.split(":").map(Number);
+
+        if (openH > closeH || (openH === closeH && openM >= closeM)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Closing time must be after opening time",
+            path: ["closingTime"],
+          });
+        }
+      }
+    }
+  });
+
+export type WorkingHour = z.infer<typeof WorkingHourSchema>;
+
 export const ListingSchema = z.object({
-  name: z.string().max(255),
+  name: z.string().min(3).max(255),
   description: z.string().max(500),
   rating: z.number().optional(),
   address: z.string().max(255).optional(),
@@ -14,6 +64,21 @@ export const ListingSchema = z.object({
   phone: z.string(),
   email: z.string().email().optional(),
   website: z.string().url(),
+
+  priceRange: z
+    .enum(["notsay", "inexpensive", "moderate", "pricey", "luxurious"])
+    .optional(),
+  fromPrice: z.number().nonnegative().optional(),
+  toPrice: z.number().positive().optional(),
+
+  workingHours: z
+    .array(WorkingHourSchema)
+    .max(7, "Cannot have more than 7 days")
+    .refine((items) => {
+      const days = items.map((i) => i.day);
+      return new Set(days).size === days.length;
+    }, "Duplicate days found")
+    .optional(),
 
   categoryId: z.coerce.number(),
 });
