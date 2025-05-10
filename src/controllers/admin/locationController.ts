@@ -20,21 +20,27 @@ export const getLocations = async (req: Request, res: Response) => {
     // validate the query parameters for page and limit
     const { page = 1, limit = 10 } = LocationsParamsSchema.parse(req.query);
 
-    const locations = await prisma.location.findMany({
-      take: limit,
-      skip: limit * (page - 1),
-    });
+    const [locations, totalItems] = await Promise.all([
+      prisma.location.findMany({
+        take: limit,
+        skip: limit * (page - 1),
+      }),
+      prisma.location.count(),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
 
     res.status(200).json({
       data: locations,
+      pagination: {
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
-    // res.status(200).json({
-    //   data: [
-    //     {
-    //       id: 1,
-    //     },
-    //   ],
-    // });
   } catch (error) {
     console.error("Error fetching listing:", error);
 

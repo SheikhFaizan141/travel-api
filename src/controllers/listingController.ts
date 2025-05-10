@@ -5,11 +5,15 @@ import path from "path";
 import fs from "fs";
 import { IdSchema } from "../utils/schemas";
 import { ListingSchema, UpdateListingSchema } from "../schemas/schemas";
-import { Prisma } from "@prisma/client";
+import { Prisma, WorkingHour } from "@prisma/client";
 
 export const getListings = async (req: Request, res: Response) => {
   try {
-    const listings = await prisma.listing.findMany();
+    const listings = await prisma.listing.findMany({
+      include: {
+        category: true,
+      },
+    });
 
     res.status(200).json({
       data: listings,
@@ -44,6 +48,8 @@ export const getListing = async (req: Request, res: Response) => {
       return;
     }
 
+    console.log("Listing:", listing);
+
     res.json({
       data: listing,
     });
@@ -59,60 +65,71 @@ export const createListing = async (req: Request, res: Response) => {
   const uploadedFiles: string[] = []; // Track all uploaded files
 
   try {
-    // Validate environment configuration first
     if (!process.env.BASE_URL) {
       throw new Error("BASE_URL environment variable is not configured");
     }
 
     const listingData = req.body;
 
-    console.log("listingData", listingData);
-    
-    const validatedData = ListingSchema.parse(listingData);
+    // Safely parse working hours if they exist
+    const workingHours = (req.body.workingHours as WorkingHour)
+      ? JSON.parse(req.body.workingHours)
+      : undefined;
 
-
-    // console.log("listingData", validatedData);
-
-    res.status(200).json({ 
-      data: listingData, 
-      beforeVal: req.body,
+    // Validate with optional working hours
+    const validatedData = ListingSchema.parse({
+      ...listingData,
+      workingHours: workingHours,
     });
- 
-    // return;
 
-    // Get Upload images files
     const files = req.files as Express.Multer.File[];
 
-    // Immediately capture all file paths
-    uploadedFiles.push(...files.map((file) => file.path));
-
-    const imagePaths =
-      files?.map((file) => file.path.replace(/\\/g, "/")) || [];
-
-    // Create transaction for atomic operations
-    const result = await prisma.$transaction(async (tx) => {
-      const newListing = await tx.listing.create({
-        data: validatedData,
+    const createdListing = await prisma.$transaction(async (tx) => {
+      await tx.category.findUniqueOrThrow({
+        where: { id: validatedData.categoryId },
       });
 
-      if (imagePaths.length) {
-        await tx.listingImage.createMany({
-          data: imagePaths.map((path, index) => ({
-            url: `${process.env.BASE_URL}/${path}`,
-            listingId: newListing.id,
-            isMain: index === 0,
-            order: index,
-          })),
-        });
+      const { workingHours, ...rest } = validatedData;
+      const newListing = await tx.listing.create({
+        data: {
+          ...rest,
+          WorkingHour: validatedData.workingHours
+            ? {
+                createMany: {
+                  data: validatedData.workingHours.map((wh) => ({
+                    day: wh.day,
+                    is24Hour: wh.is24Hour,
+                    openTime: wh.openingTime,
+                    closeTime: wh.closingTime,
+                  })),
+                },
+              }
+            : undefined,
+        },
+        include: {
+          WorkingHour: true,
+        },
+      });
+
+      if (files?.length) {
+        const featureImage = files.find((f) => f.fieldname === "featuredImage");
+        if (featureImage) {
+          uploadedFiles.push(featureImage.path);
+          await tx.listingImage.create({
+            data: {
+              url: `${process.env.BASE_URL}/${featureImage.path.replace(
+                /\\/g,
+                "/"
+              )}`,
+              isMain: true,
+              order: 0,
+              listingId: newListing.id,
+            },
+          });
+        }
       }
 
       return newListing;
-    });
-
-    // Fetch complete listing data
-    const createdListing = await prisma.listing.findUnique({
-      where: { id: result.id },
-      include: { images: true },
     });
 
     res.status(201).json({
@@ -121,6 +138,20 @@ export const createListing = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Error updating listing:", error);
+
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: "Validation error",
+        details: error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        })),
+      });
+
+      return;
+    }
 
     // Cleanup files if any error occurs
     if (uploadedFiles.length > 0) {
@@ -141,28 +172,15 @@ export const createListing = async (req: Request, res: Response) => {
       );
     }
 
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        error: "Validation error",
-        details: error.errors.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
-        })),
-      });
-
-      return;
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2003") {
+        res.status(400).json({
+          success: false,
+          error: "Invalid category ID: Category does not exist",
+        });
+        return;
+      }
     }
-
-    // if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    //   // The .code property can be accessed in a type-safe manner
-    //   if (error.code === "P2002") {
-    //     console.log(
-    //       "There is a unique constraint violation, a new user cannot be created with this email"
-    //     );
-    //   }
-    // }
 
     // Handle other errors
     res.status(500).json({ error: "Internal server error a", details: error });
@@ -173,13 +191,13 @@ export const updateListing = async (req: Request, res: Response) => {
   try {
     const { id } = IdSchema.parse(req.params);
 
-    // Verify existence first 
-    await prisma.listing.findUniqueOrThrow({ 
+    // Verify existence first
+    await prisma.listing.findUniqueOrThrow({
       where: {
         id: id,
       },
     });
- 
+
     const listingData = JSON.parse(req.body.listing);
     const validatedData = UpdateListingSchema.parse(listingData);
 

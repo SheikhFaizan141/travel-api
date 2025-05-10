@@ -14,13 +14,8 @@ import {
   updateLocation,
 } from "../controllers/admin/locationController";
 import upload from "../config/filesystems";
-import {
-  createCategory,
-  deleteCategory,
-  getCategories,
-  updateCategory,
-} from "../controllers/admin/categoryController";
-import clientRoutes from "./clientRoutes";
+import adminRoutes from "./adminRoutes";
+import prisma from "../config/db";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
 // import multer from "multer";
@@ -30,20 +25,17 @@ const router = express.Router();
 // router.use("/", clientRoutes);
 
 // get listings route
-router.get("/listings", getListings);
-
-// get listing route
-router.get("/listings/:id", getListing);
+// router.get("/listings", getListings);
 
 // create listing route
-router.post(
-  "/listings",
-  upload.fields([
-    { name: "featuredImage", maxCount: 1 },
-    { name: "otherImages", maxCount: 5 },
-  ]),
-  createListing
-);
+// router.post(
+//   "/listings",
+//   upload.fields([
+//     { name: "featuredImage", maxCount: 1 },
+//     { name: "otherImages", maxCount: 5 },
+//   ]),
+//   createListing
+// );
 
 // // update listing route
 router.patch(
@@ -58,6 +50,7 @@ router.patch(
 // // delete listing route
 router.delete("/listings/:id", deleteListing);
 
+router.use("/admin", adminRoutes);
 // location routes here
 router.get("/locations", getLocations);
 
@@ -72,17 +65,6 @@ router.patch("/locations/:id", upload.single("featured_image"), updateLocation);
 
 // // delete location route
 router.delete("/locations/:id", deleteLocation);
-
-// // category routes here
-router.get("/categories", getCategories);
-
-// router.get("/categories/:id");
-
-router.post("/categories", createCategory);
-
-router.patch("/categories", updateCategory);
-
-router.delete("/categories/:id", deleteCategory);
 
 // // test routes
 router.post(
@@ -103,5 +85,15 @@ router.post(
     });
   }
 );
+
+// categories
+router.get("/categories", async (req, res) => {
+  const categories = await prisma.category.findMany();
+
+  res.status(200).json({
+    success: true,
+    data: categories,
+  });
+});
 
 export default router;

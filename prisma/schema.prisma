@@ -33,25 +33,48 @@ enum Role {
 }
 
 model Listing {
-  id          Int       @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   name        String
-  description String
-  rating      Float?
-  address     String
-  city        String
-  zip         String
   phone       String?
-  email       String?
   website     String?
-  reviews     Review[]
-  categoryId  Int
-  category    Category  @relation(fields: [categoryId], references: [id])
-  locationId  Int? // Foreign key (optional if listing can exist without location)
-  location    Location? @relation(fields: [locationId], references: [id])
+  description String
 
-  images    ListingImage[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  rating  Float?
+  address String?
+  city    String?
+  zip     String?
+
+  email String?
+
+  priceRange String?
+  fromPrice  Float?
+  toPrice    Float?
+
+  reviews    Review[]
+  
+  categoryId Int
+  category   Category  @relation(fields: [categoryId], references: [id])
+  locationId Int? // Foreign key (optional if listing can exist without location)
+  location   Location? @relation(fields: [locationId], references: [id])
+
+  images      ListingImage[]
+  WorkingHour WorkingHour[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkingHour {
+  id        Int     @id @default(autoincrement())
+  day       String
+  is24Hour  Boolean
+  openTime  String?
+  closeTime String?
+
+  listingId Int
+  listing   Listing @relation(fields: [listingId], references: [id])
+
+  @@unique([day, listingId])
 }
 
 model ListingImage {
@@ -68,9 +91,16 @@ model ListingImage {
 }
 
 model Category {
-  id       Int       @id @default(autoincrement())
-  name     String
-  listings Listing[] // a category can have many listings
+  id           Int       @id @default(autoincrement())
+  name         String
+  slug         String    @unique
+  description  String?
+  icon         String?
+  banner_image String?
+  listings     Listing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Location {
@@ -81,6 +111,9 @@ model Location {
   parent         Int?
   featured_image String?
   listing        Listing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Review {
