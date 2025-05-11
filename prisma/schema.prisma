@@ -47,8 +47,8 @@ model Listing {
   email String?
 
   priceRange String?
-  fromPrice  Float?
-  toPrice    Float?
+  priceFrom  Float?
+  priceTo    Float?
 
   reviews    Review[]
   

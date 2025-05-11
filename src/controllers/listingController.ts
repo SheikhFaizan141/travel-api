@@ -7,19 +7,54 @@ import { IdSchema } from "../utils/schemas";
 import { ListingSchema, UpdateListingSchema } from "../schemas/schemas";
 import { Prisma, WorkingHour } from "@prisma/client";
 
+const paginationSchema = z
+  .object({
+    page: z.string().optional().default("1").transform(Number),
+    limit: z.string().optional().default("10").transform(Number),
+  })
+  .transform(({ page, limit }) => ({
+    page: Math.max(1, page),
+    limit: Math.max(1, Math.min(100, limit)),
+  }));
+
 export const getListings = async (req: Request, res: Response) => {
   try {
-    const listings = await prisma.listing.findMany({
-      include: {
-        category: true,
-      },
-    });
+    const { page, limit } = paginationSchema.parse(req.query);
+
+    const skip = (page - 1) * limit;
+
+    const [listings, total] = await Promise.all([
+      prisma.listing.findMany({
+        skip,
+        take: limit,
+        include: { category: true },
+      }),
+      prisma.listing.count(),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
 
     res.status(200).json({
-      data: listings,
+      success: true,
+      data: {
+        listings,
+        currentPage: page,
+        totalPages,
+        totalListings: total,
+        limit,
+      },
     });
   } catch (error) {
     console.error("Error fetching listing:", error);
+
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: "Invalid query parameters",
+        details: error.errors,
+      });
+      return;
+    }
 
     // Handle other errors
     res.status(500).json({ error: "Internal server error" });
@@ -28,35 +63,43 @@ export const getListings = async (req: Request, res: Response) => {
 
 export const getListing = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-
-    // Validate the ID
-    const parsedId = Number.parseInt(id, 10);
-    if (Number.isNaN(parsedId)) {
-      res.status(400).json({ error: "Invalid ID" });
-      return;
-    }
+    const { id } = IdSchema.parse(req.params);
 
     const listing = await prisma.listing.findUnique({
       where: {
-        id: Number.parseInt(id, 10),
+        id: id,
       },
     });
 
     if (!listing) {
-      res.status(404).json({ error: "listing not found" });
+      res.status(404).json({
+        success: false,
+        error: "listing not found",
+      });
       return;
     }
 
-    console.log("Listing:", listing);
-
     res.json({
+      success: true,
       data: listing,
     });
   } catch (error) {
     console.error("Error fetching listing:", error);
 
-    // Handle other errors
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: "Validation error",
+        details: error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        })),
+      });
+
+      return;
+    }
+
     res.status(500).json({ error: "Internal server error" });
   }
 };

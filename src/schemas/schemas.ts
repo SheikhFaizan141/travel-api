@@ -68,8 +68,8 @@ export const ListingSchema = z.object({
   priceRange: z
     .enum(["notsay", "inexpensive", "moderate", "pricey", "luxurious"])
     .optional(),
-  fromPrice: z.number().nonnegative().optional(),
-  toPrice: z.number().positive().optional(),
+  priceFrom: z.coerce.number().nonnegative().optional(),
+  priceTo: z.coerce.number().positive().optional(),
 
   workingHours: z
     .array(WorkingHourSchema)
