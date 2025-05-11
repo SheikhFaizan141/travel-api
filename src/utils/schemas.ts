@@ -6,7 +6,5 @@ export const loginSchema = z.object({
 });
 
 export const IdSchema = z.object({
-  id: z.preprocess((val) => {
-    return typeof val === "string" ? Number.parseInt(val, 10) : val;
-  }, z.number().int().positive()),
+  id: z.coerce.number().int().positive(),
 });
