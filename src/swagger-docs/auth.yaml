@@ -1,0 +1,166 @@
+/auth/register:
+  post:
+    summary: Register a new user
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - name
+              - email
+              - password
+            properties:
+              name:
+                type: string
+                example: John Doe
+              email:
+                type: string
+                example: user@example.com
+              password:
+                type: string
+                example: password123
+    responses:
+      201:
+        description: User registered successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                accessToken:
+                  type: string
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      400:
+        description: User already exists
+      500:
+        description: Internal server error
+
+/auth/login:
+  post:
+    summary: Login a user
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - email
+              - password
+            properties:
+              email:
+                type: string
+                example: user@example.com
+              password:
+                type: string
+                example: password123
+    responses:
+      200:
+        description: Login successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                accessToken:
+                  type: string
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      400:
+        description: Invalid credentials
+      404:
+        description: User not found
+      500:
+        description: Internal server error
+
+/auth/forgot-password:
+  post:
+    summary: Request a password reset
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - email
+            properties:
+              email:
+                type: string
+                example: user@example.com
+    responses:
+      200:
+        description: Password reset email sent
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Password reset email sent
+                resetUrl:
+                  type: string
+                  example: http://localhost:3000/reset-password?token=abc123
+      404:
+        description: No user found with this email
+      500:
+        description: Internal server error
+
+/auth/reset-password:
+  post:
+    summary: Reset user password
+    tags: [Auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - token
+              - newPassword
+            properties:
+              token:
+                type: string
+                example: abc123
+              newPassword:
+                type: string
+                example: newpassword123
+    responses:
+      200:
+        description: Password reset successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Password reset successful
+      400:
+        description: Invalid or expired token
+      500:
+        description: Internal server error
+
+/auth/logout:
+  post:
+    summary: Logout a user
+    tags: [Auth]
+    responses:
+      200:
+        description: Logged out successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Logged out successfully
+      500:
+        description: Internal server error

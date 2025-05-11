@@ -1,7 +1,10 @@
 import express, { Request, Response } from "express";
 import apiRoutes from "./routes/api";
+import authRoutes from "./routes/authRoutes";
 import cors from "cors";
 import { notFoundMiddleware } from "./middleware/notFoundMiddleware";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./swagger";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -18,12 +21,13 @@ app.use(
 app.use("/uploads", express.static("uploads"));
 
 app.use(express.json());
-
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get("/", (req: Request, res: Response) => {
   res.send("Welcome to travel-api! as .🥰d");
 });
 
 app.use("/api", apiRoutes);
+app.use("/auth", authRoutes);
 
 // 404 Handler (for unmatched routes)
 app.use(notFoundMiddleware);
