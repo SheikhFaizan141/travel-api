@@ -1,10 +1,10 @@
 import express, { Request, Response } from "express";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import prisma from "../config/db.js";
-import { loginSchema } from "../utils/schemas.js";
+import prisma from "../config/db";
+import { loginSchema } from "../utils/schemas";
 import crypto from "crypto";
-import { sendPasswordResetEmail } from "../utils/email.js";
+import { sendPasswordResetEmail } from "../utils/email";
 
 const router = express.Router();
 
@@ -35,7 +35,10 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
     const { name, email, password } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) res.status(400).json({ message: "User already exists" });
+    if (existingUser) {
+      res.status(400).json({ message: "User already exists" });
+      return;
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
