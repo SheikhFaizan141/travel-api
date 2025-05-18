@@ -89,65 +89,132 @@ const paginationSchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(10),
 });
 
+router.get(
+  "/categories/:categorySlug/listings",
+  async (req: Request, res: Response) => {
+    try {
+      const { categorySlug } = categorySlugSchema.parse(req.params);
+      const { page, limit } = paginationSchema.parse(req.query);
 
-router.get("/listings/:categorySlug", async (req: Request, res: Response) => {
+      // Check if category exists
+      const category = await prisma.category.findUnique({
+        where: { slug: categorySlug },
+        select: { id: true, name: true, slug: true },
+      });
+
+      if (!category) {
+        res.status(404).json({
+          success: false,
+          message: `Category '${categorySlug}' not found`,
+        });
+        return;
+      }
+
+      // Get paginated listings
+      const [listings, totalCount] = await Promise.all([
+        prisma.listing.findMany({
+          where: { categoryId: category.id },
+          include: {
+            category: {
+              select: { name: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.listing.count({
+          where: { categoryId: category.id },
+        }),
+      ]);
+
+      // Format response
+      const responseData = {
+        category: {
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+        },
+
+        listings: listings,
+
+        pagination: {
+          totalItems: totalCount,
+          currentPage: page,
+          pageSize: limit,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      };
+
+      res.status(200).json({
+        success: true,
+        data: responseData,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          errors: error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        });
+        return;
+      }
+
+      console.error("Error fetching listings:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+);
+
+// src/schemas/listings.schema.ts
+export const listingIdSchema = z.object({
+  listingId: z.coerce.number().int().positive(),
+});
+
+// src/routes/listings.routes.ts
+router.get("/listings/:listingId", async (req: Request, res: Response) => {
   try {
-    const { categorySlug } = categorySlugSchema.parse(req.params);
-    const { page, limit } = paginationSchema.parse(req.query);
+    const { listingId } = listingIdSchema.parse(req.params);
 
-    // Check if category exists
-    const category = await prisma.category.findUnique({
-      where: { slug: categorySlug },
-      select: { id: true, name: true, slug: true },
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      include: {
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
+        location: true,
+        images: {
+          orderBy: { order: "asc" },
+          select: { url: true, alt: true, isMain: true },
+        },
+        WorkingHour: {
+          select: { day: true, openTime: true, closeTime: true },
+        },
+      },
     });
 
-    if (!category) {
+    if (!listing) {
       res.status(404).json({
         success: false,
-        message: `Category '${categorySlug}' not found`,
+        message: "Listing not found",
       });
+
       return;
     }
 
-    // Get paginated listings
-    const [listings, totalCount] = await Promise.all([
-      prisma.listing.findMany({
-        where: { categoryId: category.id },
-        include: {
-          category: {
-            select: { name: true },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.listing.count({
-        where: { categoryId: category.id },
-      }),
-    ]);
-
-    // Format response
-    const responseData = {
-      category: {
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-      },
-
-      listings: listings,
-
-      pagination: {
-        totalItems: totalCount,
-        currentPage: page,
-        pageSize: limit,
-        totalPages: Math.ceil(totalCount / limit),
-      },
-    };
+    // Remove sensitive fields
+    // const { email, phone, ...safeListing } = listing;
 
     res.status(200).json({
       success: true,
-      data: responseData,
+      data: {
+        ...listing,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -161,7 +228,7 @@ router.get("/listings/:categorySlug", async (req: Request, res: Response) => {
       return;
     }
 
-    console.error("Error fetching listings:", error);
+    console.error("Error fetching listing:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
