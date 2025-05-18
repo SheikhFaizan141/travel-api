@@ -14,7 +14,13 @@ import {
   getCategory,
   updateCategory,
 } from "../controllers/admin/categoryController";
-import { createListing, getListing, getListings } from "../controllers/listingController";
+import {
+  createListing,
+  deleteListing,
+  getListing,
+  getListings,
+  updateListing,
+} from "../controllers/listingController";
 
 const router = express.Router();
 
@@ -33,6 +39,19 @@ router.post(
   ]),
   createListing
 );
+  
+// // update listing route
+router.put(
+  "/listings/:id",
+  upload.fields([
+    { name: "featuredImage", maxCount: 1 },
+    { name: "otherImages", maxCount: 5 },
+  ]),
+  updateListing
+);
+
+// delete listing route
+router.delete("/listings/:id", deleteListing);
 
 // location routes here
 router.get("/locations", getLocations);

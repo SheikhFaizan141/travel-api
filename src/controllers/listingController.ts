@@ -69,6 +69,10 @@ export const getListing = async (req: Request, res: Response) => {
       where: {
         id: id,
       },
+      include: {
+        WorkingHour: true,
+        category: true,
+      },
     });
 
     if (!listing) {
@@ -212,7 +216,7 @@ export const createListing = async (req: Request, res: Response) => {
             console.error(`Failed to cleanup file ${filePath}:`, err);
           }
         })
-      );
+      );  
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -241,32 +245,18 @@ export const updateListing = async (req: Request, res: Response) => {
       },
     });
 
-    const listingData = JSON.parse(req.body.listing);
-    const validatedData = UpdateListingSchema.parse(listingData);
+    const listingData = req.body;
 
-    const files = req.files as Express.Multer.File[];
-    const imagePaths =
-      files?.map((file) => file.path.replace(/\\/g, "/")) || [];
+    // Safely parse working hours if they exist
+    const workingHours = (req.body.workingHours as WorkingHour)
+      ? JSON.parse(req.body.workingHours)
+      : undefined;
 
-    // skip image update if no new images are uploaded
-    if (imagePaths.length > 0) {
-      // Create transaction for atomic operations
-      // await prisma.$transaction(async (tx) => {
-      //   await tx.listingImage.deleteMany({
-      //     where: {
-      //       listingId: id,
-      //     },
-      //   });
-      //   await tx.listingImage.createMany({
-      //     data: imagePaths.map((path, index) => ({
-      //       url: `${process.env.BASE_URL}/${path}`,
-      //       listingId: id,
-      //       isMain: index === 0,
-      //       order: index,
-      //     })),
-      //   });
-      // });
-    }
+    // Validate with optional working hours
+    const validatedData = ListingSchema.parse({
+      ...listingData,
+      workingHours: workingHours,
+    });
 
     const updatedListing = await prisma.listing.update({
       where: {
@@ -318,6 +308,7 @@ export const deleteListing = async (req: Request, res: Response) => {
 
     // Verify existence first
     const existingListing = await prisma.listing.findUnique({ where: { id } });
+
     if (!existingListing) {
       res.status(404).json({
         success: false,
