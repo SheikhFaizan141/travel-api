@@ -1,11 +1,4 @@
-import express from "express";
-import {
-  createListing,
-  deleteListing,
-  getListing,
-  getListings,
-  updateListing,
-} from "../controllers/listingController";
+import express, { Request, Response } from "express";
 import {
   createLocation,
   deleteLocation,
@@ -16,41 +9,18 @@ import {
 import upload from "../config/filesystems";
 import adminRoutes from "./adminRoutes";
 import prisma from "../config/db";
+import { z } from "zod";
+import { getCategoryListings } from "../controllers/categoryContoller";
+import { getListingDetails } from "../controllers/listingController";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
-// import multer from "multer";
 
 const router = express.Router();
 
 // router.use("/", clientRoutes);
 
-// get listings route
-// router.get("/listings", getListings);
-
-// create listing route
-// router.post(
-//   "/listings",
-//   upload.fields([
-//     { name: "featuredImage", maxCount: 1 },
-//     { name: "otherImages", maxCount: 5 },
-//   ]),
-//   createListing
-// );
-
-// // update listing route
-router.patch(
-  "/listings/:id",
-  upload.fields([
-    { name: "featuredImage", maxCount: 1 },
-    { name: "otherImages", maxCount: 5 },
-  ]),
-  updateListing
-);
-
-// // delete listing route
-router.delete("/listings/:id", deleteListing);
-
 router.use("/admin", adminRoutes);
+
 // location routes here
 router.get("/locations", getLocations);
 
@@ -95,5 +65,10 @@ router.get("/categories", async (req, res) => {
     data: categories,
   });
 });
+
+router.get("/categories/:categorySlug/listings", getCategoryListings);
+
+// src/routes/listings.routes.ts
+router.get("/listings/:listingId", getListingDetails);
 
 export default router;

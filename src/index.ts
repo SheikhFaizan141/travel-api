@@ -27,7 +27,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api", apiRoutes);
-app.use("/auth", authRoutes);
+// app.use("/auth", authRoutes);
 
 // 404 Handler (for unmatched routes)
 app.use(notFoundMiddleware);

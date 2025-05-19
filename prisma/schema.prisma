@@ -50,8 +50,8 @@ model Listing {
   priceFrom  Float?
   priceTo    Float?
 
-  reviews    Review[]
-  
+  reviews Review[]
+
   categoryId Int
   category   Category  @relation(fields: [categoryId], references: [id])
   locationId Int? // Foreign key (optional if listing can exist without location)
@@ -72,7 +72,7 @@ model WorkingHour {
   closeTime String?
 
   listingId Int
-  listing   Listing @relation(fields: [listingId], references: [id])
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@unique([day, listingId])
 }
