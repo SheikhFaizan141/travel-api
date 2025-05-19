@@ -1,12 +1,5 @@
 import express, { Request, Response } from "express";
 import {
-  createListing,
-  deleteListing,
-  getListing,
-  getListings,
-  updateListing,
-} from "../controllers/listingController";
-import {
   createLocation,
   deleteLocation,
   getLocation,
@@ -19,7 +12,6 @@ import prisma from "../config/db";
 import { z } from "zod";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
-// import multer from "multer";
 
 const router = express.Router();
 
