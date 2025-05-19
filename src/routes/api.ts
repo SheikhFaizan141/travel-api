@@ -10,6 +10,8 @@ import upload from "../config/filesystems";
 import adminRoutes from "./adminRoutes";
 import prisma from "../config/db";
 import { z } from "zod";
+import { getCategoryListings } from "../controllers/categoryContoller";
+import { getListingDetails } from "../controllers/listingController";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
 
@@ -64,168 +66,9 @@ router.get("/categories", async (req, res) => {
   });
 });
 
-const categorySlugSchema = z.object({
-  categorySlug: z
-    .string()
-    .min(3)
-    .max(50)
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Invalid slug format (use lowercase letters, numbers, and hyphens)"
-    )
-    .transform((val) => val.toLowerCase()),
-});
-
-const paginationSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(10),
-});
-
-router.get(
-  "/categories/:categorySlug/listings",
-  async (req: Request, res: Response) => {
-    try {
-      const { categorySlug } = categorySlugSchema.parse(req.params);
-      const { page, limit } = paginationSchema.parse(req.query);
-
-      // Check if category exists
-      const category = await prisma.category.findUnique({
-        where: { slug: categorySlug },
-        select: { id: true, name: true, slug: true },
-      });
-
-      if (!category) {
-        res.status(404).json({
-          success: false,
-          message: `Category '${categorySlug}' not found`,
-        });
-        return;
-      }
-
-      // Get paginated listings
-      const [listings, totalCount] = await Promise.all([
-        prisma.listing.findMany({
-          where: { categoryId: category.id },
-          include: {
-            category: {
-              select: { name: true },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-          skip: (page - 1) * limit,
-          take: limit,
-        }),
-        prisma.listing.count({
-          where: { categoryId: category.id },
-        }),
-      ]);
-
-      // Format response
-      const responseData = {
-        category: {
-          id: category.id,
-          name: category.name,
-          slug: category.slug,
-        },
-
-        listings: listings,
-
-        pagination: {
-          totalItems: totalCount,
-          currentPage: page,
-          pageSize: limit,
-          totalPages: Math.ceil(totalCount / limit),
-        },
-      };
-
-      res.status(200).json({
-        success: true,
-        data: responseData,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          errors: error.errors.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-          })),
-        });
-        return;
-      }
-
-      console.error("Error fetching listings:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-);
-
-// src/schemas/listings.schema.ts
-export const listingIdSchema = z.object({
-  listingId: z.coerce.number().int().positive(),
-});
+router.get("/categories/:categorySlug/listings", getCategoryListings);
 
 // src/routes/listings.routes.ts
-router.get("/listings/:listingId", async (req: Request, res: Response) => {
-  try {
-    const { listingId } = listingIdSchema.parse(req.params);
-
-    const listing = await prisma.listing.findUnique({
-      where: { id: listingId },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true },
-        },
-        location: true,
-        images: {
-          orderBy: { order: "asc" },
-          select: { url: true, alt: true, isMain: true },
-        },
-        WorkingHour: {
-          select: { day: true, openTime: true, closeTime: true },
-        },
-      },
-    });
-
-    if (!listing) {
-      res.status(404).json({
-        success: false,
-        message: "Listing not found",
-      });
-
-      return;
-    }
-
-    // Remove sensitive fields
-    // const { email, phone, ...safeListing } = listing;
-
-    res.status(200).json({
-      success: true,
-      data: {
-        ...listing,
-      },
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        success: false,
-        errors: error.errors.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
-        })),
-      });
-      return;
-    }
-
-    console.error("Error fetching listing:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
+router.get("/listings/:listingId", getListingDetails);
 
 export default router;
