@@ -7,7 +7,7 @@ const express_1 = __importDefault(require("express"));
 const locationController_1 = require("../controllers/admin/locationController");
 const filesystems_1 = __importDefault(require("../config/filesystems"));
 const categoryController_1 = require("../controllers/admin/categoryController");
-const listingController_1 = require("../controllers/listingController");
+const listingController_1 = require("../controllers/admin/listingController");
 const router = express_1.default.Router();
 // get listings route
 router.get("/listings", listingController_1.getListings);
