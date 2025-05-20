@@ -56,6 +56,11 @@ export type WorkingHour = z.infer<typeof WorkingHourSchema>;
 
 export const ListingSchema = z.object({
   name: z.string().min(3).max(255),
+  slug: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase with hyphens")
+    .max(255),
   description: z.string().max(500),
   rating: z.number().optional(),
   address: z.string().max(255).optional(),
