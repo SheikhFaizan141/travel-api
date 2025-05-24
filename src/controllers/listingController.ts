@@ -78,6 +78,10 @@ export const getListingBySlug = async (req: Request, res: Response) => {
         location: true,
         category: true,
         images: true,
+        faqs: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, question: true, answer: true },
+        },
       },
     });
 
@@ -90,10 +94,9 @@ export const getListingBySlug = async (req: Request, res: Response) => {
       success: true,
       data: {
         title: listing.name,
-        ...listing
+        ...listing,
       },
     });
-    
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({

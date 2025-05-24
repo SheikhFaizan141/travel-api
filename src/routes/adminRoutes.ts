@@ -41,14 +41,14 @@ router.post(
 );
   
 // // update listing route
-router.put(
-  "/listings/:id",
-  upload.fields([
-    { name: "featuredImage", maxCount: 1 },
-    { name: "otherImages", maxCount: 5 },
-  ]),
-  updateListing
-);
+// router.put(
+//   "/listings/:id",
+//   upload.fields([
+//     { name: "featuredImage", maxCount: 1 },
+//     { name: "otherImages", maxCount: 5 },
+//   ]),
+//   updateListing
+// );
 
 // delete listing route
 router.delete("/listings/:id", deleteListing);

@@ -110,7 +110,7 @@ export const getListing = async (req: Request, res: Response) => {
 };
 
 export const createListing = async (req: Request, res: Response) => {
-  const uploadedFiles: string[] = []; // Track all uploaded files
+  const uploadedFiles: string[] = [];
 
   try {
     if (!process.env.BASE_URL) {
@@ -143,6 +143,7 @@ export const createListing = async (req: Request, res: Response) => {
     const validatedData = ListingSchema.parse({
       ...listingData,
       workingHours: workingHours,
+      faqs: req.body.faqs ? JSON.parse(req.body.faqs) : undefined,
     });
 
     const files = req.files as Express.Multer.File[];
@@ -152,7 +153,7 @@ export const createListing = async (req: Request, res: Response) => {
         where: { id: validatedData.categoryId },
       });
 
-      const { workingHours, ...rest } = validatedData;
+      const { workingHours, faqs, ...rest } = validatedData;
       const newListing = await tx.listing.create({
         data: {
           ...rest,
@@ -169,9 +170,18 @@ export const createListing = async (req: Request, res: Response) => {
                 },
               }
             : undefined,
+          faqs: faqs
+            ? {
+                create: faqs.map((faq) => ({
+                  question: faq.question,
+                  answer: faq.answer,
+                })),
+              }
+            : undefined,
         },
         include: {
           WorkingHour: true,
+          faqs: true
         },
       });
 
@@ -275,18 +285,18 @@ export const updateListing = async (req: Request, res: Response) => {
       workingHours: workingHours,
     });
 
-    const updatedListing = await prisma.listing.update({
-      where: {
-        id: id,
-      },
-      data: validatedData,
-    });
+    // const updatedListing = await prisma.listing.update({
+    //   where: {
+    //     id: id,
+    //   },
+    //   data: validatedData,
+    // });
 
-    res.status(200).json({
-      success: true,
-      message: "listing updated successfully",
-      data: updatedListing,
-    });
+    // res.status(200).json({
+    //   success: true,
+    //   message: "listing updated successfully",
+    //   data: updatedListing,
+    // });
   } catch (error) {
     console.error("Error updating listing:", error);
 

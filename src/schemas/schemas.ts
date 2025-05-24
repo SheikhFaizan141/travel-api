@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { locationSchema } from "./location-schemas";
 
 export const IdSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -63,11 +64,23 @@ export const ListingSchema = z.object({
       message: "Slug can only contain lowercase letters, numbers, and hyphens",
     })
     .optional(),
-  description: z.string().max(500),
   rating: z.number().optional(),
-  address: z.string().max(255).optional(),
+
+  address: z.string().min(1, "Address is required"),
+  latitude: z
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: z
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+
+  // extra fields
   city: z.string().max(255).optional(),
   zip: z.string().max(6).optional(),
+
+  
   phone: z.string(),
   email: z.string().email().optional(),
   website: z.string().url(),
@@ -89,6 +102,17 @@ export const ListingSchema = z.object({
     .optional(),
 
   categoryId: z.coerce.number(),
+
+  description: z.string().max(500),
+
+  faqs: z
+    .array(
+      z.object({
+        question: z.string(),
+        answer: z.string(),
+      })
+    )
+    .optional(),
 });
 
 // Schema for update validation

@@ -40,10 +40,14 @@ model Listing {
   website     String?
   description String
 
-  rating  Float?
-  address String?
-  city    String?
-  zip     String?
+  rating Float?
+
+  address   String?
+  latitude  Float?
+  longitude Float?
+
+  city String?
+  zip  String?
 
   email String?
 
@@ -61,6 +65,8 @@ model Listing {
   images      ListingImage[]
   WorkingHour WorkingHour[]
 
+  faqs FAQ[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -76,6 +82,16 @@ model WorkingHour {
   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@unique([day, listingId])
+}
+
+model FAQ {
+  id        Int      @id @default(autoincrement())
+  question  String
+  answer    String
+  listingId Int
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ListingImage {
