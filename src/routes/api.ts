@@ -11,7 +11,8 @@ import adminRoutes from "./adminRoutes";
 import prisma from "../config/db";
 import { z } from "zod";
 import { getCategoryListings } from "../controllers/categoryContoller";
-import { getListingDetails } from "../controllers/listingController";
+import { getListingBySlug, getListingDetails } from "../controllers/listingController";
+import { slugSchema } from "../schemas/schemas";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
 
@@ -68,7 +69,9 @@ router.get("/categories", async (req, res) => {
 
 router.get("/categories/:categorySlug/listings", getCategoryListings);
 
-// src/routes/listings.routes.ts
 router.get("/listings/:listingId", getListingDetails);
+
+// lisings by slug
+router.get("/listings/slug/:slug", getListingBySlug);
 
 export default router;

@@ -6,6 +6,7 @@ import fs from "fs";
 import { IdSchema } from "../../utils/schemas";
 import { ListingSchema, UpdateListingSchema } from "../../schemas/schemas";
 import { Prisma, WorkingHour } from "@prisma/client";
+import { generateSlug } from "../../utils/slug";
 
 const paginationSchema = z
   .object({
@@ -118,6 +119,21 @@ export const createListing = async (req: Request, res: Response) => {
 
     const listingData = req.body;
 
+    const { slug, error } = await generateSlug(prisma, {
+      text: listingData.name,
+      slug: listingData.slug, // optional custom slug
+    });
+
+    if (error) {
+      res.status(409).json({
+        success: false,
+        error: "Validation Error",
+        details: [{ field: "slug", message: error }],
+      });
+
+      return;
+    }
+
     // Safely parse working hours if they exist
     const workingHours = (req.body.workingHours as WorkingHour)
       ? JSON.parse(req.body.workingHours)
@@ -140,6 +156,7 @@ export const createListing = async (req: Request, res: Response) => {
       const newListing = await tx.listing.create({
         data: {
           ...rest,
+          slug,
           WorkingHour: validatedData.workingHours
             ? {
                 createMany: {
@@ -216,7 +233,7 @@ export const createListing = async (req: Request, res: Response) => {
             console.error(`Failed to cleanup file ${filePath}:`, err);
           }
         })
-      );  
+      );
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

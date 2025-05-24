@@ -20,7 +20,7 @@ import {
   getListing,
   getListings,
   updateListing,
-} from "../controllers/admin/listingController";
+} from "../controllers/admin/adminListingController";
 
 const router = express.Router();
 

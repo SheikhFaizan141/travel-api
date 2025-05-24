@@ -58,9 +58,11 @@ export const ListingSchema = z.object({
   name: z.string().min(3).max(255),
   slug: z
     .string()
-    .min(1)
-    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase with hyphens")
-    .max(255),
+    .min(3)
+    .regex(/^[a-z0-9-]+$/, {
+      message: "Slug can only contain lowercase letters, numbers, and hyphens",
+    })
+    .optional(),
   description: z.string().max(500),
   rating: z.number().optional(),
   address: z.string().max(255).optional(),
@@ -138,3 +140,18 @@ export const UpdateCategorySchema = CategorySchema.extend({
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for a PATCH request",
   });
+
+export const slugSchema = z.object({
+  params: z.object({
+    slug: z
+      .string()
+      .min(3, "Slug must be at least 3 characters")
+      .max(255, "Slug must not exceed 255 characters")
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+        message:
+          "Slug must contain only lowercase letters, numbers, and hyphens",
+      }),
+  }),
+});
+
+export type ListingSlugSchema = z.infer<typeof slugSchema>;

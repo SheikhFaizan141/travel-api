@@ -21,7 +21,9 @@ app.use(
 app.use("/uploads", express.static("uploads"));
 
 app.use(express.json());
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.get("/", (req: Request, res: Response) => {
   res.send("Welcome to travel-api! as .🥰d");
 });

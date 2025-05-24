@@ -38,6 +38,6 @@ const options = {
   apis: [],
 };
 
-console.log(JSON.stringify(swaggerJsdoc(options), null, 2));
+// console.log(JSON.stringify(swaggerJsdoc(options), null, 2));
 
 export const swaggerSpec = swaggerJsdoc(options);

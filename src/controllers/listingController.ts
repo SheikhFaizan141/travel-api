@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../config/db";
+import { slugSchema } from "../schemas/schemas";
+import { title } from "process";
 
 export const listingIdSchema = z.object({
   listingId: z.coerce.number().int().positive(),
@@ -58,6 +60,50 @@ export const getListingDetails = async (req: Request, res: Response) => {
     }
 
     console.error("Error fetching listing:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getListingBySlug = async (req: Request, res: Response) => {
+  try {
+    const { params } = slugSchema.parse({ params: req.params });
+    const listingSlug = params.slug;
+
+    const listing = await prisma.listing.findUnique({
+      where: { slug: listingSlug },
+      include: {
+        location: true,
+        category: true,
+        images: true,
+      },
+    });
+
+    if (!listing) {
+      res.status(404).json({ success: false, message: "Listing not found" });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        title: listing.name,
+        ...listing
+      },
+    });
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid slug format",
+        errors: error.errors,
+      });
+      return;
+    }
+
     res.status(500).json({
       success: false,
       message: "Internal server error",
