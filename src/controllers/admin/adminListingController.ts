@@ -4,10 +4,11 @@ import prisma from "../../config/db";
 import path from "path";
 import fs from "fs";
 import { IdSchema } from "../../utils/schemas";
-import { ListingSchema, UpdateListingSchema } from "../../schemas/schemas";
+import {  UpdateListingSchema } from "../../schemas/schemas";
 import { Prisma, WorkingHour } from "@prisma/client";
 import { generateSlug } from "../../utils/slug";
-
+import { ListingSchema } from "../../schemas/listing-schemas";
+   
 const paginationSchema = z
   .object({
     page: z.string().optional().default("1").transform(Number),

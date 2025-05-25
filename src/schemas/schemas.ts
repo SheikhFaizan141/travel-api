@@ -5,7 +5,7 @@ export const IdSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-const WorkingHourSchema = z
+export const WorkingHourSchema = z
   .object({
     day: z.enum([
       "monday",
@@ -66,21 +66,22 @@ export const ListingSchema = z.object({
     .optional(),
   rating: z.number().optional(),
 
-  address: z.string().min(1, "Address is required"),
+  // Address and map fields
+  address: z.string().min(1, "Address is required").optional(),
+  
   latitude: z
     .number()
     .min(-90, "Latitude must be between -90 and 90")
-    .max(90, "Latitude must be between -90 and 90"),
+    .max(90, "Latitude must be between -90 and 90").optional(),
   longitude: z
     .number()
     .min(-180, "Longitude must be between -180 and 180")
-    .max(180, "Longitude must be between -180 and 180"),
+    .max(180, "Longitude must be between -180 and 180").optional(),
 
   // extra fields
   city: z.string().max(255).optional(),
   zip: z.string().max(6).optional(),
 
-  
   phone: z.string(),
   email: z.string().email().optional(),
   website: z.string().url(),
