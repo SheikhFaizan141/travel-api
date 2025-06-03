@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../config/db";
+import { IdSchema } from "../schemas/schemas";
 
 const categorySlugSchema = z.object({
   categorySlug: z
@@ -16,7 +17,7 @@ const categorySlugSchema = z.object({
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(10),
+  limit: z.coerce.number().int().positive().max(100).default(99),
 });
 
 export const getCategoryListings = async (req: Request, res: Response) => {
@@ -95,5 +96,52 @@ export const getCategoryListings = async (req: Request, res: Response) => {
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+export const getCategoryFeatures = async (req: Request, res: Response) => {
+  try {
+    const { id } = IdSchema.parse(req.params);
+
+    const category = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        features: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!category) {
+      res.status(404).json({
+        success: false,
+        error: "Category not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: category.features,
+    });
+  } catch (error) {
+    console.error("Error fetching category features:", error);
+
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: "Validation error",
+        details: error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        })),
+      });
+      return;
+    }
+
+    res.status(500).json({ error: "Internal server error" });
   }
 };

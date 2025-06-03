@@ -51,6 +51,7 @@ export const BaseListingSchema = z.object({
     .optional(),
 
   categoryId: z.coerce.number(),
+  features: z.array(z.coerce.number()).optional(),
 
   description: z.string().max(500),
 
@@ -62,6 +63,8 @@ export const BaseListingSchema = z.object({
       })
     )
     .optional(),
+
+  locationId: z.coerce.number().int().nonnegative().optional(),
 });
 
 export const ListingSchema = BaseListingSchema.refine(

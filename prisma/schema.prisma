@@ -67,6 +67,9 @@ model Listing {
 
   faqs FAQ[]
 
+  // Many-to-many relationship with Feature
+  features Feature[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -108,16 +111,17 @@ model ListingImage {
 }
 
 model Category {
-  id           Int       @id @default(autoincrement())
-  name         String
-  slug         String    @unique
-  description  String?
-  icon         String?
-  banner_image String?
-  listings     Listing[]
+  id          Int       @id @default(autoincrement())
+  name        String
+  slug        String    @unique
+  description String?
+  icon        String?
+  bannerImage String?
+  listings    Listing[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  features  Feature[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Location {
@@ -128,6 +132,17 @@ model Location {
   parent         Int?
   featured_image String?
   listing        Listing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Feature {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  categories Category[]
+  listings   Listing[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

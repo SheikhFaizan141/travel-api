@@ -68,15 +68,17 @@ export const ListingSchema = z.object({
 
   // Address and map fields
   address: z.string().min(1, "Address is required").optional(),
-  
+
   latitude: z
     .number()
     .min(-90, "Latitude must be between -90 and 90")
-    .max(90, "Latitude must be between -90 and 90").optional(),
+    .max(90, "Latitude must be between -90 and 90")
+    .optional(),
   longitude: z
     .number()
     .min(-180, "Longitude must be between -180 and 180")
-    .max(180, "Longitude must be between -180 and 180").optional(),
+    .max(180, "Longitude must be between -180 and 180")
+    .optional(),
 
   // extra fields
   city: z.string().max(255).optional(),
@@ -140,31 +142,6 @@ export const UpdateLocationSchema = LocationSchema.extend({
     message: "At least one field must be provided for a PATCH request",
   });
 
-// Schema for category validation
-export const CategorySchema = z.object({
-  name: z.string().max(255),
-  slug: z
-    .string()
-    .max(500)
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug must contain only lowercase letters, numbers, and hyphens"
-    ),
-  description: z.string().trim().max(500).optional(),
-  banner_image: z.instanceof(File).optional(),
-  icon: z.string().optional(),
-});
-
-// Schema for update validation
-export const UpdateCategorySchema = CategorySchema.extend({
-  banner_image: z
-    .union([z.instanceof(File), z.string().url(), z.literal("")])
-    .optional(),
-})
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field must be provided for a PATCH request",
-  });
 
 export const slugSchema = z.object({
   params: z.object({

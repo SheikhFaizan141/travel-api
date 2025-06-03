@@ -21,6 +21,14 @@ import {
   getListings,
   updateListing,
 } from "../controllers/admin/adminListingController";
+import {
+  createFeature,
+  deleteFeature,
+  getFeatureById,
+  getFeatures,
+  updateFeature,
+} from "../controllers/admin/adminFeatureController";
+import { get } from "http";
 
 const router = express.Router();
 
@@ -39,7 +47,7 @@ router.post(
   ]),
   createListing
 );
-  
+
 // // update listing route
 // router.put(
 //   "/listings/:id",
@@ -78,5 +86,16 @@ router.post("/categories", upload.single("banner_image"), createCategory);
 router.patch("/categories/:id", upload.single("banner_image"), updateCategory);
 
 router.delete("/categories/:id", deleteCategory);
+
+// feature routes here
+router.get("/features", getFeatures);
+
+router.get("/features/:id", getFeatureById);
+
+router.post("/features", createFeature);
+
+router.put("/features/:id", updateFeature);
+
+router.delete("/features/:id", deleteFeature);
 
 export default router;

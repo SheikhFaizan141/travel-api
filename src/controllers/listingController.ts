@@ -75,8 +75,10 @@ export const getListingBySlug = async (req: Request, res: Response) => {
     const listing = await prisma.listing.findUnique({
       where: { slug: listingSlug }, 
       include: {
-        location: true,
         category: true,
+        features: true,
+        WorkingHour: true,
+        location: true,
         images: true,
         faqs: {
           orderBy: { createdAt: "asc" },

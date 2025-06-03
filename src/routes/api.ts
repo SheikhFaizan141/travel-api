@@ -10,9 +10,10 @@ import upload from "../config/filesystems";
 import adminRoutes from "./adminRoutes";
 import prisma from "../config/db";
 import { z } from "zod";
-import { getCategoryListings } from "../controllers/categoryContoller";
+import { getCategoryFeatures, getCategoryListings } from "../controllers/categoryContoller";
 import { getListingBySlug, getListingDetails } from "../controllers/listingController";
 import { slugSchema } from "../schemas/schemas";
+import { getLocationBySlug } from "../controllers/locationController";
 // import validate from "../middleware/validationMiddleware";
 // import { UpdateListingSchema } from "../schemas/schemas.js";
 
@@ -73,5 +74,10 @@ router.get("/listings/:listingId", getListingDetails);
 
 // lisings by slug
 router.get("/listings/slug/:slug", getListingBySlug);
+
+router.get("/categories/:id/features", getCategoryFeatures);
+
+// location 
+router.get("/locations/:slug/listings", getLocationBySlug);
 
 export default router;
