@@ -69,3 +69,48 @@ export async function getLocationBySlug(req: Request, res: Response) {
     });
   }
 }
+
+
+// export async function getLocations(req: Request, res: Response) {
+//   try {
+//     const { page, limit } = filterSchema.parse(req.query);
+
+//     const locations = await prisma.location.findMany({
+//       orderBy: {
+//         createdAt: "desc",
+//       },
+//       skip: (page - 1) * limit,
+//       take: limit,
+//     });
+
+//     const totalCount = await prisma.location.count();
+
+//     res.status(200).json({
+//       success: true,
+//       data: locations,
+//       pagination: {
+//         totalCount,
+//         currentPage: page,
+//         totalPages: Math.ceil(totalCount / limit),
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error fetching locations:", error);
+
+//     if (error instanceof z.ZodError) {
+//       res.status(400).json({
+//         success: false,
+//         errors: error.errors.map((err) => ({
+//           field: err.path.join("."),
+//           message: err.message,
+//         })),
+//       });
+//       return;
+//     }
+
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// }
