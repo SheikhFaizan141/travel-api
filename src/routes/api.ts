@@ -1,11 +1,4 @@
 import express, { Request, Response } from "express";
-import {
-  createLocation,
-  deleteLocation,
-  getLocation,
-  getLocations,
-  updateLocation,
-} from "../controllers/admin/locationController";
 import upload from "../config/filesystems";
 import adminRoutes from "./adminRoutes";
 import prisma from "../config/db";
@@ -18,9 +11,6 @@ import {
   getListingDetails,
 } from "../controllers/listingController";
 import { getLocationBySlug } from "../controllers/locationController";
-import { addReview } from "../controllers/reviewController";
-// import validate from "../middleware/validationMiddleware";
-// import { UpdateListingSchema } from "../schemas/schemas.js";
 
 const router = express.Router();
 
