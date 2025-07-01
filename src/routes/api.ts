@@ -11,10 +11,51 @@ import {
   getListingDetails,
 } from "../controllers/listingController";
 import { getLocationBySlug } from "../controllers/locationController";
+import { AuthenticatedRequest, authenticateJWT } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
 // router.use("/", clientRoutes);
+
+// authenticated user
+router.get(
+  "/user",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      });
+
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      console.error("Error fetching user:", error);
+
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
 
 router.use("/admin", adminRoutes);
 

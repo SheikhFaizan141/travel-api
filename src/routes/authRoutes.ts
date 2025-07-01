@@ -34,7 +34,12 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
   try {
     const { name, email, password } = req.body;
 
+    // console.log("Registering user:", { name, email });
+    // res.status(200).json({ message: "Registration endpoint hit" });
+    // return;
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
+
     if (existingUser) {
       res.status(400).json({ message: "User already exists" });
       return;
@@ -64,9 +69,14 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
       sameSite: "strict",
     });
 
-    res.status(201).json({ accessToken });
+    res.status(201).json({
+      data: {
+        accessToken: accessToken,
+      },
+    });
   } catch (error) {
     console.error(error);
+
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -117,6 +127,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 router.post("/forgot-password", async (req: Request, res: Response) => {
   try {
