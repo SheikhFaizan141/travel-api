@@ -70,8 +70,12 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
     });
 
     res.status(201).json({
-      data: {
-        accessToken: accessToken,
+      accessToken: accessToken,
+      user: {
+        id: newUser?.id,
+        name: newUser?.name,
+        email: newUser?.email,
+        role: newUser?.role,
       },
     });
   } catch (error) {
@@ -96,6 +100,7 @@ router.post("/login", async (req, res) => {
         email,
       },
     });
+
     if (!user) {
       res.status(404).json({
         message: "User not found",
@@ -121,13 +126,20 @@ router.post("/login", async (req, res) => {
       sameSite: "strict",
     });
 
-    res.status(200).json({ accessToken });
+    res.status(200).json({
+      accessToken: accessToken,
+      user: {
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        role: user?.role,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 
 router.post("/forgot-password", async (req: Request, res: Response) => {
   try {
