@@ -34,7 +34,12 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
   try {
     const { name, email, password } = req.body;
 
+    // console.log("Registering user:", { name, email });
+    // res.status(200).json({ message: "Registration endpoint hit" });
+    // return;
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
+
     if (existingUser) {
       res.status(400).json({ message: "User already exists" });
       return;
@@ -64,9 +69,18 @@ router.post("/register", async (req: Request, res: Response): Promise<any> => {
       sameSite: "strict",
     });
 
-    res.status(201).json({ accessToken });
+    res.status(201).json({
+      accessToken: accessToken,
+      user: {
+        id: newUser?.id,
+        name: newUser?.name,
+        email: newUser?.email,
+        role: newUser?.role,
+      },
+    });
   } catch (error) {
     console.error(error);
+
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -86,6 +100,7 @@ router.post("/login", async (req, res) => {
         email,
       },
     });
+
     if (!user) {
       res.status(404).json({
         message: "User not found",
@@ -111,7 +126,15 @@ router.post("/login", async (req, res) => {
       sameSite: "strict",
     });
 
-    res.status(200).json({ accessToken });
+    res.status(200).json({
+      accessToken: accessToken,
+      user: {
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        role: user?.role,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });

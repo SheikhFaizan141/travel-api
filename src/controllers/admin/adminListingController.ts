@@ -4,8 +4,9 @@ import prisma from "../../config/db";
 import path from "path";
 import fs from "fs";
 import { IdSchema } from "../../utils/schemas";
-import { ListingSchema, UpdateListingSchema } from "../../schemas/schemas";
-import { Prisma, WorkingHour } from "@prisma/client";
+import { Feature, Prisma, WorkingHour } from "@prisma/client";
+import { generateSlug } from "../../utils/slug";
+import { ListingSchema } from "../../schemas/listing-schemas";
 
 const paginationSchema = z
   .object({
@@ -70,6 +71,7 @@ export const getListing = async (req: Request, res: Response) => {
         id: id,
       },
       include: {
+        features: true,
         WorkingHour: true,
         category: true,
       },
@@ -109,7 +111,7 @@ export const getListing = async (req: Request, res: Response) => {
 };
 
 export const createListing = async (req: Request, res: Response) => {
-  const uploadedFiles: string[] = []; // Track all uploaded files
+  const uploadedFiles: string[] = [];
 
   try {
     if (!process.env.BASE_URL) {
@@ -117,6 +119,21 @@ export const createListing = async (req: Request, res: Response) => {
     }
 
     const listingData = req.body;
+
+    const { slug, error } = await generateSlug(prisma, {
+      text: listingData.name,
+      slug: listingData.slug, // optional custom slug
+    });
+
+    if (error) {
+      res.status(409).json({
+        success: false,
+        error: "Validation Error",
+        details: [{ field: "slug", message: error }],
+      });
+
+      return;
+    }
 
     // Safely parse working hours if they exist
     const workingHours = (req.body.workingHours as WorkingHour)
@@ -126,7 +143,9 @@ export const createListing = async (req: Request, res: Response) => {
     // Validate with optional working hours
     const validatedData = ListingSchema.parse({
       ...listingData,
+      features: req.body.features ? JSON.parse(req.body.features) : undefined,
       workingHours: workingHours,
+      faqs: req.body.faqs ? JSON.parse(req.body.faqs) : undefined,
     });
 
     const files = req.files as Express.Multer.File[];
@@ -136,10 +155,55 @@ export const createListing = async (req: Request, res: Response) => {
         where: { id: validatedData.categoryId },
       });
 
-      const { workingHours, ...rest } = validatedData;
+      // Check if location exists
+      if (validatedData.locationId) {
+        await tx.location.findFirstOrThrow({
+          where: { id: validatedData.locationId },
+        });
+      }
+
+      if (validatedData.features && validatedData.features.length > 0) {
+        const features = await tx.feature.findMany({
+          where: {
+            id: { in: validatedData.features },
+            categories: {
+              some: {
+                id: validatedData.categoryId,
+              },
+            },
+          },
+        });
+
+        if (features.length !== validatedData.features.length) {
+          // need to send error response
+          res.status(400).json({
+            success: false,
+            error: "Invalid features",
+            details: [
+              {
+                field: "features",
+                message:
+                  "Some features are invalid or don't belong to the selected category",
+              },
+            ],
+          });
+
+          return;
+        }
+      }
+
+      const { features, workingHours, faqs, ...rest } = validatedData;
       const newListing = await tx.listing.create({
         data: {
           ...rest,
+          slug,
+          features: features
+            ? {
+                connect: features.map((featureId) => ({
+                  id: featureId,
+                })),
+              }
+            : undefined,
           WorkingHour: validatedData.workingHours
             ? {
                 createMany: {
@@ -152,9 +216,22 @@ export const createListing = async (req: Request, res: Response) => {
                 },
               }
             : undefined,
+          faqs: faqs
+            ? {
+                create: faqs.map((faq) => ({
+                  question: faq.question,
+                  answer: faq.answer,
+                })),
+              }
+            : undefined,
+          locationId: validatedData.locationId
+            ? validatedData.locationId
+            : undefined,
         },
         include: {
           WorkingHour: true,
+          faqs: true,
+          features: true,
         },
       });
 
@@ -216,7 +293,7 @@ export const createListing = async (req: Request, res: Response) => {
             console.error(`Failed to cleanup file ${filePath}:`, err);
           }
         })
-      );  
+      );
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -258,18 +335,18 @@ export const updateListing = async (req: Request, res: Response) => {
       workingHours: workingHours,
     });
 
-    const updatedListing = await prisma.listing.update({
-      where: {
-        id: id,
-      },
-      data: validatedData,
-    });
+    // const updatedListing = await prisma.listing.update({
+    //   where: {
+    //     id: id,
+    //   },
+    //   data: validatedData,
+    // });
 
-    res.status(200).json({
-      success: true,
-      message: "listing updated successfully",
-      data: updatedListing,
-    });
+    // res.status(200).json({
+    //   success: true,
+    //   message: "listing updated successfully",
+    //   data: updatedListing,
+    // });
   } catch (error) {
     console.error("Error updating listing:", error);
 

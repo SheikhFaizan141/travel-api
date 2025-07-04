@@ -92,7 +92,7 @@
       500:
         description: Internal server error
 
-/api/listing/{id}:
+/api/listings/{id}:
   patch:
     summary: Update a listing by ID
     tags: [Listing]

@@ -2,11 +2,8 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../../config/db";
 import { Prisma } from "@prisma/client";
-import {
-  CategorySchema,
-  IdSchema,
-  UpdateLocationSchema,
-} from "../../schemas/schemas";
+import { IdSchema, UpdateLocationSchema } from "../../schemas/schemas";
+import { CategorySchema } from "../../schemas/category-schemas";
 
 const CategoryParamsSchema = z.object({
   page: z.coerce.number().int().positive().optional(),
@@ -23,7 +20,15 @@ export const getCategories = async (req: Request, res: Response) => {
         take: limit,
         skip: limit * (page - 1),
         orderBy: {
-          createdAt: "desc",
+          createdAt: "desc", 
+        },
+        include: {
+          features: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       }),
       prisma.category.count(),
@@ -87,6 +92,9 @@ export const getCategory = async (req: Request, res: Response) => {
       where: {
         id: id,
       },
+      include: {
+        features: true,
+      },
     });
 
     res.json({
@@ -136,6 +144,41 @@ export const createCategory = async (req: Request, res: Response) => {
       return;
     }
 
+    // Validate features exist if provided
+    if (validatedData.featureIds && validatedData.featureIds.length > 0) {
+      const existingFeatures = await prisma.feature.findMany({
+        where: {
+          id: {
+            in: validatedData.featureIds,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const missingFeatures = validatedData.featureIds.filter((featureId) => {
+        const featureExists = existingFeatures.some(
+          (feature) => feature.id === featureId
+        );
+        return !featureExists;
+      });
+
+      if (missingFeatures.length > 0) {
+        res.status(400).json({
+          success: false,
+          error: "Some features do not exist",
+          details: missingFeatures.map((id) => ({
+            field: "featureIds",
+            message: `Feature with ID ${id} does not exist.`,
+          })),
+        });
+        return;
+      }
+
+      // # ------------------ WORK HERE NEXT TIME ------------------
+    }
+
     // Check if the banner image is provided and set the image URL
     let fileUrl = "";
     if (req.file) {
@@ -146,8 +189,17 @@ export const createCategory = async (req: Request, res: Response) => {
     // create the category
     const newCategory = await prisma.category.create({
       data: {
-        ...validatedData,
-        banner_image: fileUrl,
+        name: validatedData.name,
+        slug: validatedData.slug,
+        description: validatedData.description,
+        icon: validatedData.icon,
+        bannerImage: fileUrl,
+        features: {
+          connect: validatedData.featureIds.map((id) => ({ id })),
+        },
+      },
+      include: {
+        features: true, // Include features if needed
       },
     });
 

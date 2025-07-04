@@ -35,14 +35,19 @@ enum Role {
 model Listing {
   id          Int     @id @default(autoincrement())
   name        String
+  slug        String  @unique
   phone       String?
   website     String?
   description String
 
-  rating  Float?
-  address String?
-  city    String?
-  zip     String?
+  rating Float?
+
+  address   String?
+  latitude  Float?
+  longitude Float?
+
+  city String?
+  zip  String?
 
   email String?
 
@@ -59,6 +64,11 @@ model Listing {
 
   images      ListingImage[]
   WorkingHour WorkingHour[]
+
+  faqs FAQ[]
+
+  // Many-to-many relationship with Feature
+  features Feature[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -77,6 +87,16 @@ model WorkingHour {
   @@unique([day, listingId])
 }
 
+model FAQ {
+  id        Int      @id @default(autoincrement())
+  question  String
+  answer    String
+  listingId Int
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model ListingImage {
   id          Int      @id @default(autoincrement())
   url         String
@@ -91,16 +111,17 @@ model ListingImage {
 }
 
 model Category {
-  id           Int       @id @default(autoincrement())
-  name         String
-  slug         String    @unique
-  description  String?
-  icon         String?
-  banner_image String?
-  listings     Listing[]
+  id          Int       @id @default(autoincrement())
+  name        String
+  slug        String    @unique
+  description String?
+  icon        String?
+  bannerImage String?
+  listings    Listing[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  features  Feature[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Location {
@@ -116,14 +137,28 @@ model Location {
   updatedAt DateTime @updatedAt
 }
 
+model Feature {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  categories Category[]
+  listings   Listing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Review {
-  id        Int      @id @default(autoincrement())
-  content   String
-  rating    Int
-  userId    Int
+  id      Int    @id @default(autoincrement())
+  content String
+  rating  Int
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
   listingId Int
-  user      User     @relation(fields: [userId], references: [id])
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  listing   Listing @relation(fields: [listingId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

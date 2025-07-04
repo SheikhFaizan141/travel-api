@@ -1,40 +1,63 @@
 import express, { Request, Response } from "express";
-import {
-  createLocation,
-  deleteLocation,
-  getLocation,
-  getLocations,
-  updateLocation,
-} from "../controllers/admin/locationController";
 import upload from "../config/filesystems";
 import adminRoutes from "./adminRoutes";
 import prisma from "../config/db";
-import { z } from "zod";
-import { getCategoryListings } from "../controllers/categoryContoller";
-import { getListingDetails } from "../controllers/listingController";
-// import validate from "../middleware/validationMiddleware";
-// import { UpdateListingSchema } from "../schemas/schemas.js";
+import {
+  getCategoryFeatures,
+  getCategoryListings,
+} from "../controllers/categoryContoller";
+import {
+  getListingBySlug,
+  getListingDetails,
+} from "../controllers/listingController";
+import { getLocationBySlug } from "../controllers/locationController";
+import { AuthenticatedRequest, authenticateJWT } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
 // router.use("/", clientRoutes);
 
+// authenticated user
+router.get(
+  "/user",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      });
+
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      console.error("Error fetching user:", error);
+
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
+
 router.use("/admin", adminRoutes);
-
-// location routes here
-router.get("/locations", getLocations);
-
-// // get location route
-router.get("/locations/:id", getLocation);
-
-// // create location route
-router.post("/locations", upload.single("featured_image"), createLocation);
-
-// // update location route
-router.patch("/locations/:id", upload.single("featured_image"), updateLocation);
-
-// // delete location route
-router.delete("/locations/:id", deleteLocation);
 
 // // test routes
 router.post(
@@ -68,7 +91,47 @@ router.get("/categories", async (req, res) => {
 
 router.get("/categories/:categorySlug/listings", getCategoryListings);
 
-// src/routes/listings.routes.ts
 router.get("/listings/:listingId", getListingDetails);
+
+// lisings by slug
+router.get("/listings/slug/:slug", getListingBySlug);
+
+router.get("/categories/:id/features", getCategoryFeatures);
+
+// location
+router.get("/locations/:slug/listings", getLocationBySlug);
+
+router.get("/locations/options", async (req: Request, res: Response) => {
+  try {
+    const locations = await prisma.location.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: locations,
+    });
+  } catch (error) {
+    console.error("Error fetching locations options:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// get reviews for a listing
+// router.get("/listings/:listingId/reviews", );
+
+// add review
+// router.post("/listings/:listingId/reviews", addReview);
 
 export default router;

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import prisma from "../../config/db.js";
+import prisma from "../../config/db";
 // import { z } from "zod";
 
 // Zod Schemas for Input Validation

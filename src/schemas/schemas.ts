@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { locationSchema } from "./location-schemas";
 
 export const IdSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-const WorkingHourSchema = z
+export const WorkingHourSchema = z
   .object({
     day: z.enum([
       "monday",
@@ -56,11 +57,33 @@ export type WorkingHour = z.infer<typeof WorkingHourSchema>;
 
 export const ListingSchema = z.object({
   name: z.string().min(3).max(255),
-  description: z.string().max(500),
+  slug: z
+    .string()
+    .min(3)
+    .regex(/^[a-z0-9-]+$/, {
+      message: "Slug can only contain lowercase letters, numbers, and hyphens",
+    })
+    .optional(),
   rating: z.number().optional(),
-  address: z.string().max(255).optional(),
+
+  // Address and map fields
+  address: z.string().min(1, "Address is required").optional(),
+
+  latitude: z
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90")
+    .optional(),
+  longitude: z
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180")
+    .optional(),
+
+  // extra fields
   city: z.string().max(255).optional(),
   zip: z.string().max(6).optional(),
+
   phone: z.string(),
   email: z.string().email().optional(),
   website: z.string().url(),
@@ -82,6 +105,17 @@ export const ListingSchema = z.object({
     .optional(),
 
   categoryId: z.coerce.number(),
+
+  description: z.string().max(500),
+
+  faqs: z
+    .array(
+      z.object({
+        question: z.string(),
+        answer: z.string(),
+      })
+    )
+    .optional(),
 });
 
 // Schema for update validation
@@ -108,28 +142,18 @@ export const UpdateLocationSchema = LocationSchema.extend({
     message: "At least one field must be provided for a PATCH request",
   });
 
-// Schema for category validation
-export const CategorySchema = z.object({
-  name: z.string().max(255),
-  slug: z
-    .string()
-    .max(500)
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug must contain only lowercase letters, numbers, and hyphens"
-    ),
-  description: z.string().trim().max(500).optional(),
-  banner_image: z.instanceof(File).optional(),
-  icon: z.string().optional(),
+
+export const slugSchema = z.object({
+  params: z.object({
+    slug: z
+      .string()
+      .min(3, "Slug must be at least 3 characters")
+      .max(255, "Slug must not exceed 255 characters")
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+        message:
+          "Slug must contain only lowercase letters, numbers, and hyphens",
+      }),
+  }),
 });
 
-// Schema for update validation
-export const UpdateCategorySchema = CategorySchema.extend({
-  banner_image: z
-    .union([z.instanceof(File), z.string().url(), z.literal("")])
-    .optional(),
-})
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field must be provided for a PATCH request",
-  });
+export type ListingSlugSchema = z.infer<typeof slugSchema>;
