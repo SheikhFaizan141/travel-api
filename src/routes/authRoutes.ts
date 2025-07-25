@@ -126,6 +126,8 @@ router.post("/login", async (req, res) => {
       sameSite: "strict",
     });
 
+    console.log(accessToken);
+
     res.status(200).json({
       accessToken: accessToken,
       user: {
@@ -135,6 +137,28 @@ router.post("/login", async (req, res) => {
         role: user?.role,
       },
     });
+
+    // res.cookie("token", accessToken, {
+    //     httpOnly: true,
+    //     secure: process.env.NODE_ENV === "production",
+    //     sameSite: "Strict", // or "None" if frontend and backend are on different domains
+    //     maxAge: 15 * 60 * 1000, // 15 minutes
+    //   })
+    //   .cookie("refreshToken", refreshToken, {
+    //     httpOnly: true,
+    //     secure: process.env.NODE_ENV === "production",
+    //     sameSite: "Strict",
+    //     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    //   })
+    //   .status(200)
+    //   .json({
+    //     user: {
+    //       id: user?.id,
+    //       name: user?.name,
+    //       email: user?.email,
+    //       role: user?.role,
+    //     },
+    //   });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });

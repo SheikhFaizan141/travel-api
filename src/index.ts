@@ -5,6 +5,7 @@ import cors from "cors";
 import { notFoundMiddleware } from "./middleware/notFoundMiddleware";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./swagger";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -12,11 +13,13 @@ const port = process.env.PORT || 5000;
 // Enable CORS for http://localhost:3000
 app.use(
   cors({
-    origin: "http://localhost:3000", // Allow frontend origin
+    origin:  process.env.FRONTEND_URL || "http://localhost:3000", // Allow frontend origin
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE", // Allowed methods
     credentials: true, // Allow cookies and headers
   })
 );
+
+app.use(cookieParser());
 
 app.use("/uploads", express.static("uploads"));
 

@@ -25,6 +25,19 @@ export const getCategoryListings = async (req: Request, res: Response) => {
     const { categorySlug } = categorySlugSchema.parse(req.params);
     const { page, limit } = paginationSchema.parse(req.query);
 
+    // get query parameters
+    const { features } = req.query;
+
+    console.log("Query parameters:", req.query);
+    res.status(200).json({
+      success: true,
+      message: "Query parameters received",
+      data: {
+        categorySlug,
+        features,
+      }
+    });
+
     // Check if category exists
     const category = await prisma.category.findUnique({
       where: { slug: categorySlug },
