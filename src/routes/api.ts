@@ -17,6 +17,17 @@ const router = express.Router();
 
 // router.use("/", clientRoutes);
 
+router.get("/set-cookie", (req: Request, res: Response) => {
+  res.cookie("testCookie", "testValue", {
+    httpOnly: true, // Cookie is not accessible via JavaScript
+    secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    sameSite: "strict", // Prevents CSRF attacks
+  }); // Set the cookie
+
+  res.status(200).json({ message: "Cookie set successfully" });
+});
+
 // authenticated user
 router.get(
   "/user",
