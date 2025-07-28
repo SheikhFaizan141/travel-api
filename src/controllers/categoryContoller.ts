@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../config/db";
 import { IdSchema } from "../schemas/schemas";
+import { Prisma } from "@prisma/client";
+import { priceRangeSchema } from "../schemas/listing-schemas";
 
 const categorySlugSchema = z.object({
   categorySlug: z
@@ -17,26 +19,22 @@ const categorySlugSchema = z.object({
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(99),
+  limit: z.coerce.number().int().positive().max(100).default(6),
 });
+
+const filterSchema = z
+  .object({
+    priceRange: priceRangeSchema,
+    features: z.string().optional(),
+  })
+  .partial();
 
 export const getCategoryListings = async (req: Request, res: Response) => {
   try {
     const { categorySlug } = categorySlugSchema.parse(req.params);
     const { page, limit } = paginationSchema.parse(req.query);
 
-    // get query parameters
-    const { features } = req.query;
-
-    console.log("Query parameters:", req.query);
-    res.status(200).json({
-      success: true,
-      message: "Query parameters received",
-      data: {
-        categorySlug,
-        features,
-      }
-    });
+    const filters = filterSchema.parse(req.query);
 
     // Check if category exists
     const category = await prisma.category.findUnique({
@@ -52,10 +50,36 @@ export const getCategoryListings = async (req: Request, res: Response) => {
       return;
     }
 
+    let featureIds = [] as number[];
+    if (filters.features) {
+      featureIds = filters.features.split(",").map((id) => parseInt(id));
+    }
+
+    const whereClause: Prisma.ListingWhereInput = {
+      categoryId: category.id,
+    };
+
+    // Add filters to where clause
+    if (filters.features && featureIds.length > 0) {
+      whereClause["features"] = {
+        some: {
+          id: {
+            in: featureIds,
+          },
+        },
+      };
+    }
+
+    if (filters.priceRange) {
+      whereClause["priceRange"] = {
+        in: filters.priceRange,
+      };
+    }
+
     // Get paginated listings
     const [listings, totalCount] = await Promise.all([
       prisma.listing.findMany({
-        where: { categoryId: category.id },
+        where: whereClause,
         include: {
           category: {
             select: { name: true },
@@ -66,7 +90,7 @@ export const getCategoryListings = async (req: Request, res: Response) => {
         take: limit,
       }),
       prisma.listing.count({
-        where: { categoryId: category.id },
+        where: whereClause,
       }),
     ]);
 
