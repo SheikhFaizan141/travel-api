@@ -77,3 +77,40 @@ export const ListingSchema = BaseListingSchema.refine(
     path: ["latitude", "longitude"],
   }
 );
+
+export const PRICE_RANGE_ENUM = [
+  "notsay",
+  "inexpensive",
+  "moderate",
+  "pricey",
+  "luxurious",
+] as const;
+
+export type PriceRangeEnum = (typeof PRICE_RANGE_ENUM)[number];
+
+export const priceRangeSchema = z
+  .string()
+  .transform((val, ctx): PriceRangeEnum[] => {
+    const ranges = val.split(",").map((r) => r.trim());
+    const invalidValues = ranges.filter(
+      (r) => !PRICE_RANGE_ENUM.includes(r as PriceRangeEnum)
+    );
+
+    if (invalidValues.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid price range values: ${invalidValues.join(", ")}`,
+      });
+      return z.NEVER;
+    }
+    return ranges as PriceRangeEnum[];
+  })
+  .optional();
+
+export const featuresSchema = z
+  .string()
+  .transform((val) => val.split(",").map((id) => parseInt(id.trim())))
+  .refine((ids) => ids.every((id) => !isNaN(id)), {
+    message: "Features must be comma-separated numbers",
+  })
+  .optional();
