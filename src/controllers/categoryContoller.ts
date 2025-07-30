@@ -26,6 +26,7 @@ const filterSchema = z
   .object({
     priceRange: priceRangeSchema,
     features: z.string().optional(),
+    search: z.string().optional(),
   })
   .partial();
 

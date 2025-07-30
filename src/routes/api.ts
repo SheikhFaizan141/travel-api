@@ -11,7 +11,10 @@ import {
   getListingDetails,
 } from "../controllers/listingController";
 import { getLocationBySlug } from "../controllers/locationController";
-import { AuthenticatedRequest, authenticateJWT } from "../middleware/authMiddleware";
+import {
+  AuthenticatedRequest,
+  authenticateJWT,
+} from "../middleware/authMiddleware";
 
 const router = express.Router();
 

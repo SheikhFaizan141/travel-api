@@ -8,12 +8,12 @@ import { swaggerSpec } from "./swagger";
 import cookieParser from "cookie-parser";
 
 const app = express();
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 // Enable CORS for http://localhost:3000
 app.use(
   cors({
-    origin:  process.env.FRONTEND_URL || "http://localhost:3000", // Allow frontend origin
+    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Allow frontend origin
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE", // Allowed methods
     credentials: true, // Allow cookies and headers
   })
@@ -42,6 +42,6 @@ app.use((err: Error, req: Request, res: Response, next: Function) => {
   res.status(500).send("Something went wrong!");
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port http://localhost:${PORT}`);
 });
