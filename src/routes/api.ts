@@ -5,7 +5,7 @@ import prisma from "../config/db";
 import {
   getCategoryFeatures,
   getCategoryListings,
-} from "../controllers/categoryContoller";
+} from "../controllers/categoryController";
 import {
   getListingBySlug,
   getListingDetails,
